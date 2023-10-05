@@ -1,4 +1,5 @@
 #include <rd8_gpio.h>
+#include <rd8_uart0.h>
 
 typedef enum 
 {
@@ -111,12 +112,57 @@ void LED_ShowSet(unsigned char LED, LED_STEAE_ENUM State)
 	}
 }
 
+__bit UartSendFlag = 0; //发送中断标志位
+__bit UartReceiveFlag = 0; //接收中断标志位
+UART0_HandleInfoDef UART0_HandleInfo;
+
+void Uart_Int(void)
+{
+  if(UART0_GetFlagStatus(UART0_FLAG_TI))
+  {
+    UART0_ClearFlag(UART0_FLAG_TI);
+    if(UART0_Transmit_IRQHandler(&UART0_HandleInfo) == Status_OK)
+      UartSendFlag = 1;
+  }
+  if(UART0_GetFlagStatus(UART0_FLAG_RI))
+  {
+    UART0_ClearFlag(UART0_FLAG_RI);
+    if(UART0_Receive_IRQHandler(&UART0_HandleInfo) == Status_OK)
+      UartReceiveFlag = 1;
+  }
+}
+
+void Uart_Test(void)
+{
+  while(1)
+  {
+    uint8_t RxData[10] = {0};
+		
+    UART0_HandleInfo.TxState = UART0_HandleInfo.RxState = UART0_STATE_READY;
+		//接收10Byte的数据
+    if(UART0_Receive_IT(&UART0_HandleInfo, RxData, 10) == Status_OK)
+    {
+      while(!UartReceiveFlag);
+      UartReceiveFlag = 0;
+			//发送接收到的数据
+      if(UART0_Transmit_IT(&UART0_HandleInfo, RxData, 10) == Status_OK)
+      {
+        while(!UartSendFlag);
+        UartSendFlag = 0;
+      }
+    }
+  }
+}
+
 void main(void) {
     led_init();
-    int i=0; 
-    while(1) {
-        for (i=1; i<=20; i++) {
-            LED_ShowSet(i, LED_EN);
-        }
-    }
+    Uart_Int();
+    
+    int i=0;
+    Uart_Test(); 
+    // while(1) {
+    //     for (i=1; i<=20; i++) {
+    //         LED_ShowSet(i, LED_EN);
+    //     }
+    // }
 }

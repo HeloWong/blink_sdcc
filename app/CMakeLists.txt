@@ -1,4 +1,4 @@
-set(TARGET_NAME "blink")
+set(TARGET_NAME "rd8_uart_demo")
 file(GLOB_RECURSE src "*.c" "*.h")
 
 add_executable(${TARGET_NAME} ${src})
